@@ -1,6 +1,9 @@
 # Build statically
 add_definitions(-DSTATICLIB)
 
+# enable googletest
+enable_testing()
+
 # Add external libraries as include dirs, so we can do #include "httplib" for example
 include_directories(${CMAKE_SOURCE_DIR}/external/rocksdb/include)
 include_directories(${CMAKE_SOURCE_DIR}/external/cpp-linenoise)
@@ -11,6 +14,7 @@ include_directories(${CMAKE_SOURCE_DIR}/external/cxxopts)
 include_directories(${CMAKE_SOURCE_DIR}/external/cryptopp)
 include_directories(${CMAKE_SOURCE_DIR}/external/sqlite3)
 include_directories(${CMAKE_SOURCE_DIR}/external/lz4)
+include_directories(${CMAKE_SOURCE_DIR}/external/googletest/include)
 
 # Show cmake where the source files are
 # Note, if you add remove a source file, you will need to re-run cmake so it
@@ -34,6 +38,7 @@ file(GLOB_RECURSE P2p P2p/*)
 file(GLOB_RECURSE Rpc Rpc/*)
 file(GLOB_RECURSE Serialization Serialization/*)
 file(GLOB_RECURSE SubWallets SubWallets/*)
+file(GLOB_RECURSE turtlecoin_test test/*)
 file(GLOB_RECURSE Transfers Transfers/*)
 file(GLOB_RECURSE TurtleCoind Daemon/*)
 file(GLOB_RECURSE Utilities Utilities/*)
@@ -53,7 +58,7 @@ else()
 endif()
 
 # Group the files together in IDEs
-source_group("" FILES $${Common} ${Crypto} ${CryptoNoteCore} ${CryptoNoteProtocol} ${TurtleCoind} ${JsonRpcServer} ${Http} ${Logging} ${Logger} ${miner} ${Mnemonics} ${Nigel} ${NodeRpcProxy} ${P2p} ${Rpc} ${Serialization} ${System} ${Transfers} ${Wallet} ${WalletApi} ${WalletBackend} ${WalletService} ${zedwallet} ${zedwallet++} ${CryptoTest} ${Errors} ${Utilities} ${SubWallets})
+source_group("" FILES $${Common} ${Crypto} ${CryptoNoteCore} ${CryptoNoteProtocol} ${TurtleCoind} ${JsonRpcServer} ${Http} ${Logging} ${Logger} ${miner} ${Mnemonics} ${Nigel} ${NodeRpcProxy} ${P2p} ${Rpc} ${Serialization} ${System} ${Transfers} ${Wallet} ${WalletApi} ${WalletBackend} ${WalletService} ${zedwallet} ${zedwallet++} ${CryptoTest} ${turtlecoin_test} ${Errors} ${Utilities} ${SubWallets})
 
 # Define a group of files as a library to link against
 add_library(BlockchainExplorer STATIC ${BlockchainExplorer})
@@ -97,11 +102,15 @@ if(MSVC)
   set(WALLET_API_SOURCES_OS
     BinaryInfo/walletapi.rc
   )
+  set(TCTEST_SOURCES_OS
+    BinaryInfo/turtlecoin-test.rc
+  )
 endif()
 
 add_executable(cryptotest ${CryptoTest} ${CT_SOURCES_OS})
 add_executable(miner ${miner} ${MINER_SOURCES_OS})
 add_executable(WalletService ${WalletService} ${PG_SOURCES_OS})
+add_executable(turtlecoin_test ${turtlecoin_test} ${TCTEST_SOURCES_OS})
 add_executable(TurtleCoind ${TurtleCoind} ${DAEMON_SOURCES_OS})
 add_executable(WalletApi ${WalletApi} ${WALLET_API_SOURCES_OS})
 add_executable(zedwallet ${zedwallet} ${ZED_WALLET_SOURCES_OS})
@@ -146,6 +155,7 @@ target_link_libraries(P2P upnpc-static Serialization)
 target_link_libraries(Rpc P2P Utilities CryptoNoteCore)
 target_link_libraries(Serialization Common Crypto ${Boost_LIBRARIES})
 target_link_libraries(SubWallets Common Logger)
+target_link_libraries(turtlecoin_test Common gtest_main)
 target_link_libraries(Transfers CryptoNoteCore)
 target_link_libraries(Utilities Common Errors Wallet)
 target_link_libraries(Wallet NodeRpcProxy Transfers CryptoNoteCore Common ${Boost_LIBRARIES})
@@ -170,6 +180,7 @@ add_dependencies(miner version)
 add_dependencies(JsonRpcServer version)
 add_dependencies(P2P version)
 add_dependencies(Rpc version)
+add_dependencies(turtlecoin_test version)
 add_dependencies(TurtleCoind version)
 add_dependencies(WalletApi version)
 add_dependencies(WalletService version)
@@ -183,6 +194,7 @@ set_property(TARGET WalletService PROPERTY OUTPUT_NAME "turtle-service")
 set_property(TARGET miner PROPERTY OUTPUT_NAME "miner")
 set_property(TARGET cryptotest PROPERTY OUTPUT_NAME "cryptotest")
 set_property(TARGET WalletApi PROPERTY OUTPUT_NAME "wallet-api")
+set_property(TARGET turtlecoin_test PROPERTY OUTPUT_NAME "turtlecoin-test")
 
 # Additional make targets, can be used to build a subset of the targets
 # e.g. make pool will build only TurtleCoind and service
@@ -190,5 +202,4 @@ add_custom_target(pool DEPENDS TurtleCoind WalletService)
 add_custom_target(solominer DEPENDS TurtleCoind zedwallet miner)
 add_custom_target(cli DEPENDS TurtleCoind zedwallet)
 
-enable_testing()
-add_subdirectory(test)
+add_test(NAME test COMMAND turtlecoin_test)
